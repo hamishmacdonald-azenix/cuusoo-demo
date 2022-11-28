@@ -1,0 +1,16 @@
+cron_schedule: 0 4 * * *
+enabled: true
+tables:
+  - compute_statistics_all_columns: false
+    table_name: raw.clinical_ink_sas_files
+    table_properties:
+      - name: delta.tuneFileSizesForRewrites
+        value: 'True'
+      - name: delta.logRetentionDuration
+        value: interval 1 days
+      - name: delta.deletedFileRetentionDuration
+        value: interval 1 days
+      - name: delta.autoOptimize.autoCompact
+        value: 'True'
+    vacuum_retention_hours: 24
+    z_order_by: RAW_FILELOADDATE

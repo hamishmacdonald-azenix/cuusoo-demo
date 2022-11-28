@@ -1,0 +1,101 @@
+{
+  "azure": {
+    "tenant_Id": "67a30ef2-0e3c-4839-bb1d-f572e5bb35de",
+    "subscription_id": "42127ebb-7b1c-4da1-8e7a-3b735c00a95c",
+    "service_principal_appId": "5ee3ec66-5127-48ec-8d50-7c0d3b67bac3",
+    "keyvault_name": "wtdemo-akv"
+  },
+  "clusters": [
+    {
+      "cluster_name": "dp-dbr-clu-etl",
+      "spark_version": "11.0.x-scala2.12",
+      "node_type_id": "Standard_DS3_v2",
+      "num_workers": 0,
+      "autotermination_minutes": 30,
+      "runtime_engine": "STANDARD",
+      "custom_tags": {
+        "environment": "Non-Production",
+        "project": "westrac-demo",
+        "ResourceClass": "SingleNode"
+      },
+      "spark_conf": {
+        "spark.sql.autoBroadcastJoinThreshold": 104857600,
+        "spark.databricks.cluster.profile": "singleNode",
+        "spark.databricks.io.parquet.nativeReader.enabled": false,
+        "spark.master": "local[*, 4]",
+        "spark.lake_account_name": "wtdemostadl",
+        "spark.config_account_name": "wtdemosta",
+        "fs.azure.account.key.csdemostadl.dfs.core.windows.net": "{{secrets/datalakeconfig/storageAccountDataLakeKey}}",
+        "fs.azure.account.key.csdemosta.dfs.core.windows.net": "{{secrets/datalakeconfig/storageAccountGenericKey}}"
+      },
+      "init_scripts": [
+        {
+          "dbfs": {
+            "destination": "dbfs:/init/interactive_cluster_init.sh"
+          }
+        }
+      ]
+    }
+  ],
+  "sql_endpoints": [
+    {
+      "name": "dp-dbr-sep-alwayson",
+      "cluster_size": "2X-Small",
+      "auto_stop_mins": 30,
+      "min_num_clusters": 1,
+      "max_num_clusters": 1,
+      "tags": {
+        "custom_tags": [
+          {
+            "key": "environment",
+            "value": "Non-Production"
+          },
+          {
+            "key": "project",
+            "value": "westrac-demo"
+          }
+        ]
+      },
+      "spot_instance_policy": "COST_OPTIMIZED",
+      "enable_photon": "true",
+      "enable_serverless_compute": "false"
+    }
+  ],
+  "dbfs": [
+    {
+      "source_path": "../dbfs/job_cluster_init.sh",
+      "target_path": "dbfs:/init/job_cluster_init.sh",
+      "recursive": false,
+      "overwrite": true
+    },
+    {
+      "source_path": "../dbfs/interactive_cluster_init.sh",
+      "target_path": "dbfs:/init/interactive_cluster_init.sh",
+      "recursive": false,
+      "overwrite": true
+    }
+  ],
+  "jobs": [
+    {
+      "name": "Create-Tables",
+      "cluster_name": "dp-dbr-clu-etl",
+      "tasks": [
+        {
+          "task_key": "Create-Tables",
+          "notebook_task": {
+            "notebook_path": "databricks/notebooks/definition/Create_Tables"
+          }
+        }
+      ],
+      "timeout_seconds": 0,
+      "email_notifications": {},
+      "max_concurrent_runs": 1,
+      "format": "MULTI_TASK",
+      "git_source": {
+        "git_url": "https://gitlab.mantelgroup.com.au/cuusoo/cuusoo-azure-ingestion-framework.git",
+        "git_provider": "gitLab",
+        "git_branch": "westrac-demo"
+      }
+    }
+  ]
+}

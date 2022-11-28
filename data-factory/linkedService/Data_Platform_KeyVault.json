@@ -1,0 +1,11 @@
+{
+    "name": "Data_Platform_KeyVault",
+    "properties": {
+        "description": "This is the linked service for the Data Platform Key vault instance",
+        "annotations": [],
+        "type": "AzureKeyVault",
+        "typeProperties": {
+            "baseUrl": "https://cgst-np-dp-akv.vault.azure.net/"
+        }
+    }
+}

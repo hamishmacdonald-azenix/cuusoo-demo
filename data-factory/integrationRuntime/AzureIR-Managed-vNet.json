@@ -1,0 +1,25 @@
+{
+	"name": "AzureIR-Managed-vNet",
+	"properties": {
+		"type": "Managed",
+		"description": "This is the Azure hosted runtime using the Managed vNet connection",
+		"typeProperties": {
+			"computeProperties": {
+				"location": "Australia East",
+				"dataFlowProperties": {
+					"computeType": "General",
+					"coreCount": 8,
+					"timeToLive": 10,
+					"cleanup": false
+				},
+				"pipelineExternalComputeScaleProperties": {
+                    "timeToLive": 60
+                }
+			}
+		},
+		"managedVirtualNetwork": {
+			"type": "ManagedVirtualNetworkReference",
+			"referenceName": "default"
+		}
+	}
+}

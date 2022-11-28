@@ -1,0 +1,167 @@
+{
+	"name": "Databricks_Job_Run",
+	"properties": {
+		"description": "This pipeline will execute the Azure Logic App used to call a Databricks notebook",
+		"activities": [
+			{
+				"name": "WH - Call logic app to execute Databricks job",
+				"type": "WebHook",
+				"dependsOn": [
+					{
+						"activity": "FN - Get Logic App URL",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@string(activity('FN - Get Logic App URL').output.secret_value)",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"body": {
+						"value": "@json(concat('{\"job_name\": \"'\n\t\t, pipeline().parameters.job_name\n\t\t, '\"}'\n))",
+						"type": "Expression"
+					},
+					"timeout": "01:00:00"
+				}
+			},
+			{
+				"name": "IF - Check if job succeeded",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "WH - Call logic app to execute Databricks job",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(toLower(activity('WH - Call logic app to execute Databricks job').response.result_state), 'success')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "FN - Log task error - Job failed",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [
+								{
+									"activity": "FL - Fail task if job is not successful",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "write-task-log",
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"task_path\": \"'\n\t\t, pipeline().parameters.task_path\n\t\t, '\", \"run_date\": \"'\n\t\t, utcNow()\n\t\t, '\", \"run_status\": \"Failed\"'\n\t\t, ', \"error_message\": \"'\n\t\t, activity('FL - Fail task if job is not successful').output.message\n\t\t, '\"}'\n)",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Function",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "FL - Fail task if job is not successful",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@concat('Job ID '\n    ,string(activity('WH - Call logic app to execute Databricks job').response.job_id)\n    ,', Run ID '\n    ,string(activity('WH - Call logic app to execute Databricks job').response.run_id)\n    ,' did not execute successfully. Result state is: '\n    ,string(activity('WH - Call logic app to execute Databricks job').response.result_state)\n)",
+									"type": "Expression"
+								},
+								"errorCode": "500"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "FN - Get Logic App URL",
+				"type": "AzureFunctionActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": true,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"functionName": "get-keyvault-secret",
+					"method": "POST",
+					"body": {
+						"secret_name": "logicAppDatabricksJobRunURL"
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Data_Platform_Function",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "FN - Log task error - Get Logic App URL",
+				"type": "AzureFunctionActivity",
+				"dependsOn": [
+					{
+						"activity": "FN - Get Logic App URL",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"functionName": "write-task-log",
+					"method": "POST",
+					"body": {
+						"value": "@concat('{\"task_path\": \"'\n\t\t, pipeline().parameters.task_path\n\t\t, '\", \"run_date\": \"'\n\t\t, utcNow()\n\t\t, '\", \"run_status\": \"Failed\"'\n\t\t, ', \"error_message\": \"'\n\t\t, string(activity('FN - Get Logic App URL').error.message)\n\t\t, '\"}'\n)",
+						"type": "Expression"
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Data_Platform_Function",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"job_name": {
+				"type": "string"
+			},
+			"task_path": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Transformation"
+		},
+		"annotations": []
+	}
+}

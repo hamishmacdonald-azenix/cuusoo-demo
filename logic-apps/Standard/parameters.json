@@ -1,0 +1,14 @@
+{
+  "DATABRICKS_TOKEN": {
+    "type": "String",
+    "value": "@appsetting('DATABRICKS_PAT')"
+  },
+  "DATABRICKS_WORKSPACE_URL": {
+    "type": "String",
+    "value": "@appsetting('DATABRICKS_WORKSPACE_URL')"
+  },
+  "DATA_FACTORY_NAME": {
+    "type": "String",
+    "value": "@appsetting('DATA_FACTORY_NAME')"
+  }
+}

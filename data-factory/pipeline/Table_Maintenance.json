@@ -1,0 +1,71 @@
+{
+	"name": "Table_Maintenance",
+	"properties": {
+		"description": "This pipeline will execute a Databricks notebook to perform maintenance tasks on delta tables in the data lake",
+		"activities": [
+			{
+				"name": "FEL - Loop through tasks to run",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@json(string(pipeline().parameters.task_json))",
+						"type": "Expression"
+					},
+					"batchCount": 5,
+					"activities": [
+						{
+							"name": "DBR - Run the Table Maintenance notebook",
+							"type": "DatabricksNotebook",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/Repos/cuusoo-demo/cuusoo-demo/databricks/notebooks/maintenance/Table_Maintenance",
+								
+								"baseParameters": {
+									"task_path": {
+										"value": "@json(string(item()))['task_path']",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Databricks",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"cluster_id": {
+										"value": "@pipeline().parameters.databricks_cluster_id",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"system_name": {
+				"type": "string"
+			},
+			"task_json": {
+				"type": "string"
+			},
+			"databricks_cluster_id": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Maintenance"
+		},
+		"annotations": []
+	}
+}

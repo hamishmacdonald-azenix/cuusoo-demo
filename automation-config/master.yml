@@ -1,0 +1,21 @@
+systems:
+# Ingestion
+  - config_path: ingestion/sql server/adventureworks
+    databricks_cluster_name: dp-dbr-clu-etl
+    enabled: true
+    pipeline_name: SQL_Import_Master
+    system_name: SQL Server Import to Lake - AdventureWorks
+    system_type: sql_import           
+# Raw to Bronze   
+  - config_path: ingestion/raw to bronze/adventureworks
+    databricks_cluster_name: dp-dbr-clu-etl
+    enabled: true
+    pipeline_name: Raw_To_Bronze_Import
+    system_name: Landing to Raw Import - AdventureWorks
+    system_type: landing_to_raw        
+# Transformation
+  - config_path: Transformation
+    enabled: false
+    pipeline_name: Databricks_Job_Run_Master
+    system_name: Databricks Trasformation
+    system_type: transformation  

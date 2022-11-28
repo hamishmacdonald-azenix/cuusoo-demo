@@ -1,0 +1,45 @@
+cron_schedule: 0 */12 * * *
+enabled: true
+source:
+  collection_name: events
+  database_name: demo
+  incremental_column: CreatedHumanTime
+  incremental_column_data_type: datetime
+  load_type: incremental
+  object_name: AssessmentMoveCompleted
+  secrets:
+    account_endoint: cosmosAccountEndpoint
+    account_key: cosmosAccountKey
+  sql_query: SELECT * FROM c WHERE c.EventTypeName = 'AssessmentMoveCompleted'
+  system_name: Hub
+  translator:
+    type: TabularTranslator
+    mappings:
+     - source: {path: "$['EventTypeName']"}
+       sink: {name: EventTypeName}
+     - source: {path: "$['CreatedHumanTime']"}
+       sink: {name: CreatedHumanTime}
+     - source: {path: "$['StreamName']"}
+       sink: {name: StreamName}
+     - source: {path: "$['Payload']"}
+       sink: {name: Payload}
+     - source: {path: "$['SourceSystemIdentifier']"}
+       sink: {name: SourceSystemIdentifier}         
+     - source: {path: "$['id']"}
+       sink: {name: id} 
+     - source: {path: "$['_rid']"}
+       sink: {name: _rid}       
+     - source: {path: "$['_self']"}
+       sink: {name: _self}   
+     - source: {path: "$['_etag']"}
+       sink: {name: _etag}                    
+     - source: {path: "$['_ts']"}
+       sink: {name: _ts}                                   
+    mapComplexValuesToString: true
+start_date: 2022-06-11 00:00
+target:
+  file_path: raw/hub/unprocessed
+  file_type: parquet
+  secrets:
+    storage_account_name: storageAccountDataLake
+  storage_container_name: datalakestore

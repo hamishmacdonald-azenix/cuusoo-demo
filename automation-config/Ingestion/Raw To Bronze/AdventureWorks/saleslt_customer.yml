@@ -1,0 +1,16 @@
+cron_schedule: 0 */6 * * *
+dependencies:
+- ingestion/sql server/adventureworks/saleslt_customer.yml
+enabled: true
+source:
+  file_format: parquet
+  file_name_search: saleslt.customer_
+  file_path: raw/adventureworks/unprocessed
+  secrets:
+    storage_account_name: storageAccountDataLake
+  storage_container_name: datalakestore
+start_date: 2022-05-11 00:00
+target:
+  delta_table_name: bronze.adv_saleslt_customer
+  key_column_list: CustomerID
+  load_type: incremental

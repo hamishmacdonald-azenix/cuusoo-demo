@@ -1,0 +1,51 @@
+{
+	"name": "Generic_DatalakeGen2_Parquet_MPE",
+	"properties": {
+		"description": "The is the generic Azure Data Lake Gen 2 dataset using the ADF managed private endpoint",
+		"linkedServiceName": {
+			"referenceName": "Generic_DatalakeGen2",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"storageAccountName": {
+					"value": "@dataset().storageAccountName",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"storageAccountName": {
+				"type": "string"
+			},
+			"storageContainerName": {
+				"type": "string"
+			},
+			"filePath": {
+				"type": "string"
+			},
+			"fileName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().fileName",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@dataset().filePath",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().storageContainerName",
+					"type": "Expression"
+				}
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	}
+}

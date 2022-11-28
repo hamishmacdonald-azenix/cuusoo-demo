@@ -1,0 +1,29 @@
+{
+	"name": "Data_Platform_Databricks",
+	"properties": {
+		"description": "This is a linked service for the data platform Azure Databricks instance",
+		"parameters": {
+			"cluster_id": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://adb-8948892749497913.13.azuredatabricks.net/",
+			"accessToken": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "Data_Platform_KeyVault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "databricksPATToken"
+			},
+			"existingClusterId": "@linkedService().cluster_id"
+		},
+		"connectVia": {
+			"referenceName": "AzureIR",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

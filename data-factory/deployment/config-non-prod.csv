@@ -1,0 +1,6 @@
+type,name,path,value
+linkedService,Data_Platform_KeyVault,typeProperties.baseUrl,"https://wtdemo-akv.vault.azure.net/"
+linkedService,Data_Platform_Function,typeProperties.functionAppUrl,"https://wtdemo-afa.azurewebsites.net"
+linkedService,Data_Platform_Databricks,typeProperties.domain,"https://adb-2623677676371107.7.azuredatabricks.net/"
+pipeline,Sharepoint_File_Download,activities["FEL - Loop through tasks to run"].typeProperties.batchCount,10
+pipeline,Raw_To_Bronze_Import,activities["FEL - Loop through tasks to run"].typeProperties.batchCount,10

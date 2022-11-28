@@ -1,0 +1,46 @@
+{
+	"name": "Generic_CosmosDB_SQL",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "Generic_CosmosDB_SQL",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"accountEndpoint": {
+					"value": "@dataset().accountEndpoint",
+					"type": "Expression"
+				},
+				"secretName": {
+					"value": "@dataset().secretName",
+					"type": "Expression"
+				},
+				"databaseName": {
+					"value": "@dataset().databaseName",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"accountEndpoint": {
+				"type": "string"
+			},
+			"secretName": {
+				"type": "string"
+			},
+			"databaseName": {
+				"type": "string"
+			},
+			"collectionName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "CosmosDbSqlApiCollection",
+		"schema": {},
+		"typeProperties": {
+			"collectionName": {
+				"value": "@dataset().collectionName",
+				"type": "Expression"
+			}
+		}
+	}
+}

@@ -1,0 +1,17 @@
+# api requirements 
+databricks-cli==0.17.3
+click==8.0.1
+
+# unit testing requirements 
+# pytest==6.2.5
+# databricks-connect==7.3.*
+# pandas==1.3.4
+# pyarrow==5.0.0
+
+
+# internal packages
+-e .
+
+# databricks CI requirements
+python-dotenv==0.19.2
+requests==2.27.1

@@ -1,0 +1,795 @@
+{
+	"name": "CosmosDB_Import_Parquet",
+	"properties": {
+		"description": "This is the generic pipeline to ingest CosmosDB data sources into the data lake in parquet format",
+		"activities": [
+			{
+				"name": "If - Check if load is incremental",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "SV - Set the target file name",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(json(string(pipeline().parameters.config))['source']['load_type'], 'incremental')",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "CD - CosmosDB to Lake - Full - Parquet",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "AF - Get storage account name - Full",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "AF - Get account endpoint - Full",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "CosmosDbSqlApiSource",
+									"query": {
+										"value": "@json(string(pipeline().parameters.config))['source']['sql_query']",
+										"type": "Expression"
+									},
+									"preferredRegions": [],
+									"detectDatetime": true
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"value": "@json(string(pipeline().parameters.config))['source']['translator']",
+									"type": "Expression"
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "Generic_CosmosDB_SQL",
+									"type": "DatasetReference",
+									"parameters": {
+										"accountEndpoint": {
+											"value": "@json(string(activity('AF - Get account endpoint - Full').output))['secret_value']",
+											"type": "Expression"
+										},
+										"secretName": {
+											"value": "@json(string(pipeline().parameters.config))['source']['secrets']['account_key']",
+											"type": "Expression"
+										},
+										"databaseName": {
+											"value": "@json(string(pipeline().parameters.config))['source']['database_name']",
+											"type": "Expression"
+										},
+										"collectionName": {
+											"value": "@json(string(pipeline().parameters.config))['source']['collection_name']",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "Generic_DatalakeGen2_Parquet_MPE",
+									"type": "DatasetReference",
+									"parameters": {
+										"storageAccountName": {
+											"value": "@json(string(activity('AF - Get storage account name - Full').output))['secret_value']",
+											"type": "Expression"
+										},
+										"storageContainerName": {
+											"value": "@json(string(pipeline().parameters.config))['target']['storage_container_name']",
+											"type": "Expression"
+										},
+										"filePath": {
+											"value": "@json(string(pipeline().parameters.config))['target']['file_path']",
+											"type": "Expression"
+										},
+										"fileName": {
+											"value": "@variables('targetFileName')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "FN - Log completion of task - Full",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [
+								{
+									"activity": "CD - CosmosDB to Lake - Full - Parquet",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "write-task-log",
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"task_path\": \"'\n\t\t, pipeline().parameters.task_path\n\t\t, '\", \"run_date\": \"'\n\t\t, utcNow()\n\t\t, '\", \"run_status\": \"Completed\"}'\n)",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Function",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "AF - Get storage account name - Full",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": true,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "get-keyvault-secret",
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"secret_name\": \"', json(string(pipeline().parameters.config))['target']['secrets']['storage_account_name'], '\"}')",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Function",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "FN - Log task error - Get storage account name full",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [
+								{
+									"activity": "AF - Get storage account name - Full",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "write-task-log",
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"task_path\": \"'\n\t\t, pipeline().parameters.task_path\n\t\t, '\", \"run_date\": \"'\n\t\t, utcNow()\n\t\t, '\", \"run_status\": \"Failed\"'\n\t\t, ', \"error_message\": \"'\n\t\t, string(activity('AF - Get storage account name - Full').error.message)\n\t\t, '\"}'\n)",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Function",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "AF - Get account endpoint - Full",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": true,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "get-keyvault-secret",
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"secret_name\": \"', json(string(pipeline().parameters.config))['source']['secrets']['account_endoint'], '\"}')",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Function",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "FN - Log task error - Get account endpoint full",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [
+								{
+									"activity": "AF - Get account endpoint - Full",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "write-task-log",
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"task_path\": \"'\n\t\t, pipeline().parameters.task_path\n\t\t, '\", \"run_date\": \"'\n\t\t, utcNow()\n\t\t, '\", \"run_status\": \"Failed\"'\n\t\t, ', \"error_message\": \"'\n\t\t, string(activity('AF - Get account endpoint - Full').error.message)\n\t\t, '\"}'\n)",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Function",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "CD - CosmosDB to Lake - Incremental - Parquet",
+							"description": "Write CosmosDB data to lake",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "AF - Get storage account name",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								},
+								{
+									"activity": "AF - Get account endpoint",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "CosmosDbSqlApiSource",
+									"query": {
+										"value": "@variables('sqlQuery')",
+										"type": "Expression"
+									},
+									"preferredRegions": [],
+									"detectDatetime": true
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"value": "@json(string(pipeline().parameters.config))['source']['translator']",
+									"type": "Expression"
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "Generic_CosmosDB_SQL",
+									"type": "DatasetReference",
+									"parameters": {
+										"accountEndpoint": {
+											"value": "@json(string(activity('AF - Get account endpoint').output))['secret_value']",
+											"type": "Expression"
+										},
+										"secretName": {
+											"value": "@json(string(pipeline().parameters.config))['source']['secrets']['account_key']",
+											"type": "Expression"
+										},
+										"databaseName": {
+											"value": "@json(string(pipeline().parameters.config))['source']['database_name']",
+											"type": "Expression"
+										},
+										"collectionName": {
+											"value": "@json(string(pipeline().parameters.config))['source']['collection_name']",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "Generic_DatalakeGen2_Parquet_MPE",
+									"type": "DatasetReference",
+									"parameters": {
+										"storageAccountName": {
+											"value": "@json(string(activity('AF - Get storage account name').output))['secret_value']",
+											"type": "Expression"
+										},
+										"storageContainerName": {
+											"value": "@json(string(pipeline().parameters.config))['target']['storage_container_name']",
+											"type": "Expression"
+										},
+										"filePath": {
+											"value": "@json(string(pipeline().parameters.config))['target']['file_path']",
+											"type": "Expression"
+										},
+										"fileName": {
+											"value": "@variables('targetFileName')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "SV - Generate incremental SQL query",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "DBR - Get the latest incremental value",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "sqlQuery",
+								"value": {
+									"value": "@if(\n\tgreater(\n\t\tactivity('DBR - Get the latest incremental value').output.runOutput\n\t\t,''\n\t)\n\t,if(\n\t\tgreater(\n\t\t\tindexOf(json(string(pipeline().parameters.config))['source']['sql_query'],' WHERE ')\n\t\t\t,0)\n\t\t,concat(json(string(pipeline().parameters.config))['source']['sql_query'], ' AND c.', json(string(pipeline().parameters.config))['source']['incremental_column'], ' > ''', activity('DBR - Get the latest incremental value').output.runOutput, '''')\n\t\t,concat(json(string(pipeline().parameters.config))['source']['sql_query'], ' WHERE c.', json(string(pipeline().parameters.config))['source']['incremental_column'], ' > ''', activity('DBR - Get the latest incremental value').output.runOutput, '''')\n\t)\n\t,json(string(pipeline().parameters.config))['source']['sql_query']\n)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "FN - Log task error - Get latest log",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [
+								{
+									"activity": "DBR - Get the latest incremental value",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "write-task-log",
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"task_path\": \"'\n\t\t, pipeline().parameters.task_path\n\t\t, '\", \"run_date\": \"'\n\t\t, utcNow()\n\t\t, '\", \"run_status\": \"Failed\"'\n\t\t, ', \"error_message\": \"'\n\t\t, string(activity('DBR - Get the latest incremental value').error.message)\n\t\t, '\"}'\n)",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Function",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "FN - Log task error - Copy data",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [
+								{
+									"activity": "CD - CosmosDB to Lake - Incremental - Parquet",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "write-task-log",
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"task_path\": \"'\n\t\t, pipeline().parameters.task_path\n\t\t, '\", \"run_date\": \"'\n\t\t, utcNow()\n\t\t, '\", \"run_status\": \"Failed\"'\n\t\t, ', \"error_message\": \"'\n\t\t, string(activity('CD - CosmosDB to Lake - Incremental - Parquet').error.message)\n\t\t, '\"}'\n)",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Function",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "DBR - Write latest incremental value",
+							"type": "DatabricksNotebook",
+							"dependsOn": [
+								{
+									"activity": "CD - CosmosDB to Lake - Incremental - Parquet",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/Repos/cuusoo-demo/cuusoo-demo/databricks/notebooks/ingestion/Log_Incremental_Column_Value",
+								"baseParameters": {
+									"file_name": {
+										"value": "@variables('targetFileName')",
+										"type": "Expression"
+									},
+									"task_path": {
+										"value": "@pipeline().parameters.task_path",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Databricks",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"cluster_id": {
+										"value": "@pipeline().parameters.databricks_cluster_id",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "AF - Get storage account name",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [
+								{
+									"activity": "SV - Generate incremental SQL query",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "get-keyvault-secret",
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"secret_name\": \"', json(string(pipeline().parameters.config))['target']['secrets']['storage_account_name'], '\"}')",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Function",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "FN - Log task error - Get storage account name",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [
+								{
+									"activity": "AF - Get storage account name",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "write-task-log",
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"task_path\": \"'\n\t\t, pipeline().parameters.task_path\n\t\t, '\", \"run_date\": \"'\n\t\t, utcNow()\n\t\t, '\", \"run_status\": \"Failed\"'\n\t\t, ', \"error_message\": \"'\n\t\t, string(activity('AF - Get storage account name').error.message)\n\t\t, '\"}'\n)",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Function",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "FN - Log completion of task - Incremental",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [
+								{
+									"activity": "DBR - Write latest incremental value",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "write-task-log",
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"task_path\": \"'\n\t\t, pipeline().parameters.task_path\n\t\t, '\", \"run_date\": \"'\n\t\t, utcNow()\n\t\t, '\", \"run_status\": \"Completed\"}'\n)",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Function",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "FN - Log task error - Latest Incrememental Value",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [
+								{
+									"activity": "DBR - Write latest incremental value",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "write-task-log",
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"task_path\": \"'\n\t\t, pipeline().parameters.task_path\n\t\t, '\", \"run_date\": \"'\n\t\t, utcNow()\n\t\t, '\", \"run_status\": \"Failed\"'\n\t\t, ', \"error_message\": \"'\n\t\t, string(activity('DBR - Write latest incremental value').error.message)\n\t\t, '\"}'\n)",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Function",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "DBR - Get the latest incremental value",
+							"type": "DatabricksNotebook",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"notebookPath": "/Repos/cuusoo-demo/cuusoo-demo/databricks/notebooks/ingestion/Get_Incremental_Column_Value",
+								"baseParameters": {
+									"task_path": {
+										"value": "@pipeline().parameters.task_path",
+										"type": "Expression"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Databricks",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"cluster_id": {
+										"value": "@pipeline().parameters.databricks_cluster_id",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "AF - Get account endpoint",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [
+								{
+									"activity": "SV - Generate incremental SQL query",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": true,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "get-keyvault-secret",
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"secret_name\": \"', json(string(pipeline().parameters.config))['source']['secrets']['account_endoint'], '\"}')",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Function",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "FN - Log task error - Get account endpoint",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [
+								{
+									"activity": "AF - Get account endpoint",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "write-task-log",
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"task_path\": \"'\n\t\t, pipeline().parameters.task_path\n\t\t, '\", \"run_date\": \"'\n\t\t, utcNow()\n\t\t, '\", \"run_status\": \"Failed\"'\n\t\t, ', \"error_message\": \"'\n\t\t, string(activity('AF - Get account endpoint').error.message)\n\t\t, '\"}'\n)",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Function",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "SV - Set the target file name",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "FN - Log start of task",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "targetFileName",
+					"value": {
+						"value": "@concat(json(string(pipeline().parameters.config))['source']['object_name']\n    , '_'\n    , formatDateTime(utcNow(), 'yyyyMMddTHHmmss')\n    , '.parquet'\n)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "FN - Log start of task",
+				"type": "AzureFunctionActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"functionName": "write-task-log",
+					"method": "POST",
+					"body": {
+						"value": "@concat('{\"task_path\": \"'\n\t\t, pipeline().parameters.task_path\n\t\t, '\", \"run_date\": \"'\n\t\t, utcNow()\n\t\t, '\", \"run_status\": \"Running\"}'\n)",
+						"type": "Expression"
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "Data_Platform_Function",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"config": {
+				"type": "string"
+			},
+			"task_path": {
+				"type": "string"
+			},
+			"databricks_cluster_id": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"sqlQuery": {
+				"type": "String"
+			},
+			"targetFileName": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "Ingestion"
+		},
+		"annotations": []
+	}
+}

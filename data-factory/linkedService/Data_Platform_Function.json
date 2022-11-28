@@ -1,0 +1,24 @@
+{
+	"name": "Data_Platform_Function",
+	"properties": {
+		"description": "This is the linked service for the Data Platform Function App",
+		"annotations": [],
+		"type": "AzureFunction",
+		"typeProperties": {
+			"functionAppUrl": "https://cgst-np-dp-afa.azurewebsites.net",
+			"functionKey": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "Data_Platform_KeyVault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "functionAppFunctionKey"
+			},
+			"authentication": "Anonymous"
+		},
+		"connectVia": {
+			"referenceName": "AzureIR",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

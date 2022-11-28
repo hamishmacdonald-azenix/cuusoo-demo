@@ -1,0 +1,18 @@
+cron_schedule: 0 */12 * * *
+enabled: true
+source:
+  incremental_column: ModifiedDate
+  incremental_column_data_type: datetime
+  load_type: incremental
+  object_name: saleslt.salesorderdetail
+  secrets:
+    connection_string: sqlConnectionStringAdventureWorks
+  sql_query: SELECT * FROM [SalesLT].[SalesOrderDetail]
+  system_name: adventureworkslt
+start_date: 2022-05-11 00:00
+target:
+  file_path: raw/adventureworks/unprocessed
+  file_type: parquet
+  secrets:
+    storage_account_name: storageAccountDataLake
+  storage_container_name: datalakestore

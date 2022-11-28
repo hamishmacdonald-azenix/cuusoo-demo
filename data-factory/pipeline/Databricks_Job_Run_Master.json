@@ -1,0 +1,130 @@
+{
+	"name": "Databricks_Job_Run_Master",
+	"properties": {
+		"description": "This pipeline will call a child pipeline to either run a set of Databricks jobs sequentially or in parallel",
+		"activities": [
+			{
+				"name": "FEL - Loop through tasks to run",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@json(string(pipeline().parameters.task_json))",
+						"type": "Expression"
+					},
+					"batchCount": 10,
+					"activities": [
+						{
+							"name": "IF - Check if run type is parallel",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "AF - Get the task config",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(toLower(json(string(activity('AF - Get the task config').output))['run_type']), 'parallel')",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "EP - Databricks_Job_Run_Sequential",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "Databricks_Job_Run_Sequential",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"job_json": {
+													"value": "@json(string(activity('AF - Get the task config').output))['job_list']",
+													"type": "Expression"
+												},
+												"task_path": {
+													"value": "@json(string(item()))['task_path']",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "EP - Databricks_Job_Run_Parallel",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "Databricks_Job_Run_Parallel",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"job_json": {
+													"value": "@json(string(activity('AF - Get the task config').output))['job_list']",
+													"type": "Expression"
+												},
+												"task_path": {
+													"value": "@json(string(item()))['task_path']",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "AF - Get the task config",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "read-yaml-config",
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"task_path\": \"', json(string(item()))['task_path'], '\"}')",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Function",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"system_name": {
+				"type": "string",
+				"defaultValue": "Databricks Trasformation"
+			},
+			"task_json": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Transformation"
+		},
+		"annotations": []
+	}
+}

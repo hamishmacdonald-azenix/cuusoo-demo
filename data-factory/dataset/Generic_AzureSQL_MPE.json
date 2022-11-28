@@ -1,0 +1,24 @@
+{
+	"name": "Generic_AzureSQL_MPE",
+	"properties": {
+		"description": "The is the generic Azure SQL dataset using the ADF managed private endpoint",
+		"linkedServiceName": {
+			"referenceName": "Generic_Azure_SQL",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"secretName": {
+					"value": "@dataset().secretName",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"secretName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": []
+	}
+}

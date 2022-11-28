@@ -1,0 +1,15 @@
+cron_schedule: 0 */12 * * *
+dependencies:
+  - Ingestion/Raw To Bronze/AdventureWorks/saleslt_customer.yml
+  - Ingestion/Raw To Bronze/AdventureWorks/saleslt_sales_order_detail.yml
+enabled: true
+job_list:
+  - Create-Tables
+  - Transformed-Table-Load
+  - Curated-Master-Reference-Table-Load
+  - Curated-Result-Table-Load
+  - Reporting-Table-Load
+  - Table-Maintenance
+  - Unit-Testing
+run_type: sequential
+start_date: 2022-05-10 02:00

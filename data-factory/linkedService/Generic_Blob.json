@@ -1,0 +1,21 @@
+{
+	"name": "Generic_Blob",
+	"properties": {
+		"description": "This is a generic blob storage connection",
+		"parameters": {
+			"storageAccountName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureBlobStorage",
+		"typeProperties": {
+			"serviceEndpoint": "@{concat('https://', linkedService().storageAccountName, '.blob.core.windows.net')}",
+			"accountKind": "StorageV2"
+		},
+		"connectVia": {
+			"referenceName": "AzureIR-Managed-vNet",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

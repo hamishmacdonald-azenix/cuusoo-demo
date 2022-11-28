@@ -1,0 +1,128 @@
+# Azure deployment settings
+service_principal_appId: 5ee3ec66-5127-48ec-8d50-7c0d3b67bac3
+tenantId: 67a30ef2-0e3c-4839-bb1d-f572e5bb35de
+subscription_id: 42127ebb-7b1c-4da1-8e7a-3b735c00a95c
+# Terraform config
+tf_location: australiaeast
+tf_resource_group: rg-cuusoo-demo-tfs
+tf_storage_account: csdemotfs
+tf_container_name: tfstate
+tf_statefile: infra-cuusoo-demo.state
+# Boolean indicators
+deploy_datafactory: true
+deploy_datafactory_vsts: false
+deploy_datafactory_mpe: true
+deploy_storage: true
+deploy_network: true
+deploy_keyvault: true
+deploy_loganalytics: true
+deploy_app: true
+deploy_logic_app_standard: false
+deploy_logic_app_consumption: true
+deploy_app_registrations: true
+deploy_groups: false
+# Resource group names
+rg_data_name: rg-cuusoo-demo-data
+rg_security_name: rg-cuusoo-demo-security
+rg_network_name: rg-cuusoo-demo-network
+rg_admin_name: rg-cuusoo-demo-admin
+rg_app_name: rg-cuusoo-demo-app
+### Azure resource-specific names
+## Function App
+asp_name: csdemo-asp
+asp_sku_size: B1
+function_app_name: csdemo-afa
+## Logic App
+logic_asp_name: csdemo-ws
+logic_asp_sku_size: "WS1"
+logic_app_name: csdemo-ala
+## Networking
+vnet_name: csdemo-vnet
+vnet_cidr: 10.0.0.0/16
+subnet_public_name: Public
+subnet_private_name: Private
+subnet_public_cidr: 10.0.0.0/24
+subnet_private_cidr: 10.0.1.0/24
+nsg_name: csdemo-nsg
+app_subnet_name: App
+app_subnet_cidr: 10.0.2.0/24
+logic_app_subnet_name: Logic_App
+logic_app_subnet_cidr: 10.0.3.0/24
+# Public IP
+public_ip_name: csdemo-pip
+public_ip_prefix_name: csdemo-pipp
+public_ip_sku: Standard
+# NAT gateway
+nat_gateway_name: csdemo-nat
+# Allowed firewall IPs
+allowed_firewall_ips: []
+## Storage
+storage_account_name_generic: csdemosta
+storage_account_name_datalake: csdemostadl
+datalake_file_system_name: datalakestore
+storage_account_name_app: csdemostapp
+storage_replication: LRS
+## Databricks
+databricks_workspace_name: csdemo-dbr
+databricks_sku: trial
+deploy_databricks_ssc: true
+databricks_managed_resource_group_name: csdemo-databricks-rg
+keyvault_scope_name: datalakeconfig
+## Keyvault
+keyvault_name: csdemo-akv
+keyvault_sku: standard
+## Data Factory
+data_factory_name: csdemo-adf
+# # Git Integration
+# adf_vsts_account_name: cogstate-dev
+# adf_vsts_branch_name: main
+# adf_vsts_project_name: cogstate-data
+# adf_vsts_repository_name: cogstate-data
+# adf_vsts_root_folder: /data-factory/clinical-trials
+# Managed private endpoints. Value set to na when the mpe is not required
+data_factory_mpe_sql: csdemosourcepe
+data_factory_mpe_sql_target_source_id: /subscriptions/42127ebb-7b1c-4da1-8e7a-3b735c00a95c/resourceGroups/rg-cuusoo-demo-data/providers/Microsoft.Sql/servers/csdemo-sql
+data_factory_mpe_sql_target_fqdns_required: true
+data_factory_mpe_sql_target_fqdns: csdemo-sql.database.windows.net
+data_factory_mpe_sql_subresource: sqlServer
+data_factory_mpe_datalake: csdemosourcepedl
+data_factory_mpe_datalake_subresource: dfs
+data_factory_mpe_keyvault: csdemosourcepekv
+data_factory_mpe_keyvault_subresource: vault
+## Log Analytics
+log_analytics_name: csdemo-law
+log_analytics_sku: PerGB2018
+log_analytics_retention: 30
+app_insights_name_function_app: csdemo-ai
+app_insights_name_logic_app: csdemo-ai-ala
+## Azure AD Groups
+keyvault_admin_group_name: Cuusoo-Demo-Admins
+storage_admin_group_name: Cuusoo-Demo-Admins
+databricks_users_group_name: Cuusoo-Demo-Admins
+databricks_admin_users_group_name: Cuusoo-Demo-Admins
+## Azure Monitor Action Groups
+action_groups: [
+  {
+    type: "email",
+    name: "DPAdminActionGroup",
+    short_name: "DPAdmin",
+    email_address: "DataPlatformAdmin@cuusoo.com.au"
+  }
+]
+## Azure AD App Registrations
+databricks_app_name: csdemo-databricks-app
+## General config
+location: Australia East
+tags: {
+  environment: Non-Production,
+  project: cuusoo-demo
+}
+## Diagnostics settings
+diagnostic_retention_days: 30 # Specify 0 to retain the events indefinitely
+diagnostic_setting_name: default
+## KeyVault secret list. Specify a default of an empty string if a random password is required and regenerate if you need to regenerate an existing key
+keyvault_secret_list_special: {
+  sqlConnectionStringAdventureWorks: Data Source=csdemo-sql.database.windows.net;Initial Catalog=AdventureWorksLT;
+}
+keyvault_secret_list_no_special: {
+}

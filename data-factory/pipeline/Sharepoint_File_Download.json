@@ -1,0 +1,60 @@
+{
+	"name": "Sharepoint_File_Download",
+	"properties": {
+		"description": "This pipeline will execute the Azure function to pull files from a SharePoint document library into the data lake",
+		"activities": [
+			{
+				"name": "FEL - Loop through tasks to run",
+				"type": "ForEach",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@json(string(pipeline().parameters.task_json))",
+						"type": "Expression"
+					},
+					"batchCount": 10,
+					"activities": [
+						{
+							"name": "AF - Download the SharePoint files",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "sharepoint-file-download",
+								"method": "POST",
+								"body": {
+									"value": "@concat('{\"task_path\": ', '\"', json(string(item()))['task_path'], '\"}')",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "Data_Platform_Function",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"system_name": {
+				"type": "string"
+			},
+			"task_json": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Ingestion"
+		},
+		"annotations": []
+	}
+}
